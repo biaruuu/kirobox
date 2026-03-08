@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Browse - KiroBox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { inter: ['Inter', 'sans-serif'] },
+          colors: {
+            border: 'hsl(240 3.7% 15.9%)',
+            background: 'hsl(240 10% 3.9%)',
+            foreground: 'hsl(0 0% 98%)',
+            muted: { DEFAULT: 'hsl(240 3.7% 15.9%)', foreground: 'hsl(240 5% 64.9%)' },
+            secondary: { DEFAULT: 'hsl(240 3.7% 15.9%)', foreground: 'hsl(0 0% 98%)' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body { background: hsl(240 10% 3.9%); color: hsl(0 0% 98%); }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: hsl(240 3.7% 25%); border-radius: 2px; }
+
+    .tab-pill {
+      padding: 7px 16px; border-radius: 100px; font-size: 13px; font-weight: 500;
+      border: 1px solid hsl(240 3.7% 20%); background: transparent;
+      color: hsl(240 5% 64.9%); cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .tab-pill.active { background: white; color: black; border-color: white; }
+
+    .genre-chip {
+      padding: 8px 14px; border-radius: 100px; font-size: 12px; font-weight: 500;
+      border: 1px solid hsl(240 3.7% 20%); background: hsl(240 5% 7%);
+      color: hsl(0 0% 98%); cursor: pointer; transition: all 0.15s;
+      text-decoration: none; white-space: nowrap;
+    }
+    .genre-chip.active, .genre-chip:hover { background: white; color: black; border-color: white; }
+
+    /* MUI search input */
+    .search-wrap {
+      position: relative;
+    }
+    .search-wrap input {
+      width: 100%; padding: 12px 16px 12px 44px;
+      background: hsl(240 5% 8%);
+      border: 1px solid hsl(240 3.7% 20%);
+      border-radius: 12px;
+      color: hsl(0 0% 98%);
+      font-size: 15px; outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-wrap input:focus { border-color: hsl(0 0% 50%); }
+    .search-wrap input::placeholder { color: hsl(240 5% 50%); }
+    .search-wrap .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: hsl(240 5% 50%); pointer-events: none; }
+
+    /* Grid - responsive fixed cards */
+    .anime-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    @media (min-width: 480px) { .anime-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 640px) { .anime-grid { grid-template-columns: repeat(5, 1fr); } }
+
+    .anime-card { transition: transform 0.2s ease; }
+    .anime-card:active { transform: scale(0.97); }
+    .anime-card .cover {
+      border-radius: 10px;
+      overflow: hidden;
+      aspect-ratio: 2/3;
+      background: hsl(240 5% 10%);
+      position: relative;
+    }
+    .anime-card .cover img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transition: transform 0.2s ease;
+    }
+    .anime-card:hover .cover img { transform: scale(1.04); }
+    .anime-card .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 5px;
+      padding: 0 1px;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      color: hsl(0 0% 90%);
+    }
+
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; background: hsla(240 10% 3.9% / 0.95); backdrop-filter: blur(16px); border-top: 1px solid hsl(240 3.7% 15.9%); }
+
+    .skeleton { background: linear-gradient(90deg, hsl(240 3.7% 13%) 25%, hsl(240 3.7% 18%) 50%, hsl(240 3.7% 13%) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fadeUp 0.3s ease forwards; }
+
+    .desktop-warning { display: none; }
+    @media (min-width: 1024px) { .desktop-warning { display: flex; } }
+  </style>
+</head>
+<body class="min-h-screen pb-20">
+
+  <!-- Desktop Warning -->
+  <div class="desktop-warning fixed inset-0 z-[200] bg-background flex-col items-center justify-center text-center p-8">
+    <div class="max-w-md">
+      <div class="text-6xl mb-6">📱</div>
+      <h1 class="text-2xl font-bold mb-3">Mobile Experience</h1>
+      <p class="text-muted-foreground mb-6">KiroBox is designed for mobile devices.</p>
+      <button onclick="document.querySelector('.desktop-warning').style.display='none'" class="px-6 py-2.5 bg-white text-black rounded-lg font-medium text-sm">Continue Anyway</button>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="px-4 pt-4 pb-3 border-b border-border/50">
+    <div class="flex items-center justify-between mb-3">
+      <h1 class="font-black text-lg">Browse</h1>
+      <a href="/index.html" class="text-muted-foreground">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </a>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap mb-3">
+      <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" placeholder="Search anime..." oninput="handleSearch(this.value)" />
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 overflow-x-auto pb-1" style="scrollbar-width:none">
+      <button class="tab-pill active" onclick="switchTab('all', this)">All</button>
+      <button class="tab-pill" onclick="switchTab('trending', this)">Trending</button>
+      <button class="tab-pill" onclick="switchTab('airing', this)">Airing</button>
+      <button class="tab-pill" onclick="switchTab('popular', this)">Popular</button>
+      <button class="tab-pill" onclick="switchTab('latest', this)">Latest</button>
+      <button class="tab-pill" onclick="switchTab('genre', this)">Genres</button>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="px-4 pt-4">
+
+    <!-- Genre chips -->
+    <div id="genreSection" class="hidden mb-4">
+      <div class="flex flex-wrap gap-2" id="genreChips">
+        <!-- filled -->
+      </div>
+    </div>
+
+    <!-- Grid -->
+    <div id="animeGrid" class="anime-grid fade-up">
+      <!-- Skeleton -->
+      <div class="skeleton aspect-[2/3]"></div>
+      <div class="skeleton aspect-[2/3]"></div>
+      <div class="skeleton aspect-[2/3]"></div>
+      <div class="skeleton aspect-[2/3]"></div>
+      <div class="skeleton aspect-[2/3]"></div>
+      <div class="skeleton aspect-[2/3]"></div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="emptyState" class="hidden flex flex-col items-center justify-center py-16 text-center">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground mb-4"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <p class="text-muted-foreground text-sm">No anime found</p>
+    </div>
+
+    <!-- Load more -->
+    <div id="loadMoreBtn" class="hidden mt-6 pb-4">
+      <button onclick="loadMore()" class="w-full py-3 border border-border rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
+        Load More
+      </button>
+    </div>
+
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <div class="flex items-center justify-around py-2">
+      <a href="/index.html" class="flex flex-col items-center gap-1 px-4 py-1 text-muted-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="text-[10px] font-medium">Home</span>
+      </a>
+      <a href="/browse.html" class="flex flex-col items-center gap-1 px-4 py-1 text-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="3" width="7" height="7"/><rect x="15" y="3" width="7" height="7"/><rect x="2" y="14" width="7" height="7"/><rect x="15" y="14" width="7" height="7"/></svg>
+        <span class="text-[10px] font-medium">Browse</span>
+      </a>
+      <a id="navProfile" href="/profile.html" class="flex flex-col items-center gap-1 px-4 py-1 text-muted-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="text-[10px] font-medium">Profile</span>
+      </a>
+    </div>
+  </nav>
+
+  <script>
+    const API = 'https://kirobox-api-0kfe.onrender.com';
+    let currentTab = 'all';
+    let currentGenre = '';
+    let homeData = null;
+    let searchTimeout;
+    let currentPage = 1;
+
+    // Nav avatar
+    (function() {
+      const username = localStorage.getItem('kirobox_username');
+      if (username) {
+        const navProfile = document.getElementById('navProfile');
+        navProfile.innerHTML = `
+          <img src="https://api.dicebear.com/7.x/initials/svg?seed=${username}&backgroundColor=ffffff&fontFamily=Inter&bold=true&radius=50" class="w-6 h-6 rounded-full" alt="${username}" />
+          <span class="text-[10px] font-medium">Profile</span>`;
+      }
+    })();
+
+    function animeCard(anime) {
+      const title = anime.title?.english || anime.title?.romaji || 'Unknown';
+      const score = anime.averageScore ? `★ ${anime.averageScore}` : '';
+      return `
+        <a href="/anime.html?id=${anime.anilistId}" class="anime-card block">
+          <div class="cover">
+            <img src="${anime.coverImage}" alt="${title}" loading="lazy" onerror="this.src='/placeholder.svg'" />
+            ${score ? `<div class="absolute bottom-1 left-1 bg-black/70 text-yellow-400 text-[9px] font-bold px-1.5 py-0.5 rounded backdrop-blur-sm">${score}</div>` : ''}
+            ${anime.status === 'RELEASING' ? '<div class="absolute top-1.5 right-1.5 w-2 h-2 bg-green-400 rounded-full shadow-lg shadow-green-400/50"></div>' : ''}
+          </div>
+          <p class="card-title">${title}</p>
+        </a>`;
+    }
+
+    function renderGrid(items) {
+      const grid = document.getElementById('animeGrid');
+      const empty = document.getElementById('emptyState');
+      if (!items || items.length === 0) {
+        grid.innerHTML = '';
+        grid.classList.add('hidden');
+        empty.classList.remove('hidden');
+        return;
+      }
+      grid.classList.remove('hidden');
+      empty.classList.add('hidden');
+      grid.innerHTML = items.map(animeCard).join('');
+    }
+
+    function appendGrid(items) {
+      if (!items || !items.length) {
+        document.getElementById('loadMoreBtn').classList.add('hidden');
+        return;
+      }
+      document.getElementById('animeGrid').insertAdjacentHTML('beforeend', items.map(animeCard).join(''));
+    }
+
+    async function loadAll() {
+      try {
+        const res = await fetch(`${API}/api/anime/library/all`);
+        const data = await res.json();
+        renderGrid(data);
+      } catch(e) { renderGrid([]); }
+    }
+
+    async function loadFromHome(section) {
+      try {
+        if (!homeData) {
+          const res = await fetch(`${API}/api/home`);
+          homeData = await res.json();
+        }
+        renderGrid(homeData[section] || []);
+      } catch(e) { renderGrid([]); }
+    }
+
+    async function loadLatest() {
+      try {
+        const res = await fetch(`${API}/api/latest`);
+        renderGrid(await res.json());
+      } catch(e) { renderGrid([]); }
+    }
+
+    async function loadGenres() {
+      try {
+        const res = await fetch(`${API}/api/genres`);
+        const genres = await res.json();
+        const chips = document.getElementById('genreChips');
+        chips.innerHTML = genres.map(g => `
+          <button class="genre-chip ${currentGenre === g ? 'active' : ''}" onclick="selectGenre('${g}', this)">${g}</button>
+        `).join('');
+      } catch(e) {}
+    }
+
+    async function selectGenre(genre, btn) {
+      currentGenre = genre;
+      document.querySelectorAll('.genre-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      currentPage = 1;
+      try {
+        const res = await fetch(`${API}/api/genre/${encodeURIComponent(genre)}?page=1`);
+        const data = await res.json();
+        renderGrid(data);
+        if (data.length === 20) {
+          document.getElementById('loadMoreBtn').classList.remove('hidden');
+        } else {
+          document.getElementById('loadMoreBtn').classList.add('hidden');
+        }
+      } catch(e) { renderGrid([]); }
+    }
+
+    async function loadMore() {
+      currentPage++;
+      try {
+        const res = await fetch(`${API}/api/genre/${encodeURIComponent(currentGenre)}?page=${currentPage}`);
+        const data = await res.json();
+        appendGrid(data);
+        if (data.length < 20) document.getElementById('loadMoreBtn').classList.add('hidden');
+      } catch(e) {}
+    }
+
+    async function switchTab(tab, el) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('searchInput').value = '';
+      document.getElementById('loadMoreBtn').classList.add('hidden');
+      document.getElementById('emptyState').classList.add('hidden');
+
+      const genreSection = document.getElementById('genreSection');
+      if (tab === 'genre') {
+        genreSection.classList.remove('hidden');
+        loadGenres();
+        renderGrid([]);
+        return;
+      } else {
+        genreSection.classList.add('hidden');
+      }
+
+      // Show skeleton
+      document.getElementById('animeGrid').classList.remove('hidden');
+      document.getElementById('animeGrid').innerHTML = `
+        <div class="skeleton aspect-[2/3]"></div>
+        <div class="skeleton aspect-[2/3]"></div>
+        <div class="skeleton aspect-[2/3]"></div>
+        <div class="skeleton aspect-[2/3]"></div>
+        <div class="skeleton aspect-[2/3]"></div>
+        <div class="skeleton aspect-[2/3]"></div>`;
+
+      if (tab === 'all') loadAll();
+      else if (tab === 'trending') loadFromHome('trending');
+      else if (tab === 'airing') loadLatest();
+      else if (tab === 'popular') loadFromHome('mostPopular');
+      else if (tab === 'latest') loadLatest();
+    }
+
+    async function handleSearch(q) {
+      clearTimeout(searchTimeout);
+      if (!q.trim()) {
+        if (currentTab !== 'genre') loadTabData();
+        return;
+      }
+      document.getElementById('loadMoreBtn').classList.add('hidden');
+
+      // Show skeleton
+      document.getElementById('animeGrid').classList.remove('hidden');
+      document.getElementById('animeGrid').innerHTML = `
+        <div class="skeleton aspect-[2/3]"></div>
+        <div class="skeleton aspect-[2/3]"></div>
+        <div class="skeleton aspect-[2/3]"></div>
+        <div class="skeleton aspect-[2/3]"></div>`;
+
+      searchTimeout = setTimeout(async () => {
+        try {
+          const res = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}`);
+          const data = await res.json();
+          renderGrid(data);
+        } catch(e) { renderGrid([]); }
+      }, 350);
+    }
+
+    function loadTabData() {
+      if (currentTab === 'all') loadAll();
+      else if (currentTab === 'trending') loadFromHome('trending');
+      else if (currentTab === 'airing' || currentTab === 'latest') loadLatest();
+      else if (currentTab === 'popular') loadFromHome('mostPopular');
+    }
+
+    // Check URL params
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab') || params.get('section');
+    const genreParam = params.get('genre');
+
+    if (genreParam) {
+      // Switch to genre tab and load
+      currentTab = 'genre';
+      document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pill')[5]?.classList.add('active'); // genre tab
+      document.getElementById('genreSection').classList.remove('hidden');
+      loadGenres().then(() => {
+        const chip = document.querySelector(`[onclick*="${genreParam}"]`);
+        if (chip) selectGenre(genreParam, chip);
+        else selectGenre(genreParam, document.createElement('button'));
+      });
+    } else {
+      loadAll();
+    }
+  </script>
+</body>
+</html>
