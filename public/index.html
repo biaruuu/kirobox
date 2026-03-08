@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KiroBox - Watch Anime Online</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { inter: ['Inter', 'sans-serif'] },
+          colors: {
+            border: 'hsl(240 3.7% 15.9%)',
+            input: 'hsl(240 3.7% 15.9%)',
+            ring: 'hsl(240 4.9% 83.9%)',
+            background: 'hsl(240 10% 3.9%)',
+            foreground: 'hsl(0 0% 98%)',
+            primary: { DEFAULT: 'hsl(0 0% 98%)', foreground: 'hsl(240 5.9% 10%)' },
+            secondary: { DEFAULT: 'hsl(240 3.7% 15.9%)', foreground: 'hsl(0 0% 98%)' },
+            muted: { DEFAULT: 'hsl(240 3.7% 15.9%)', foreground: 'hsl(240 5% 64.9%)' },
+            accent: { DEFAULT: 'hsl(240 3.7% 15.9%)', foreground: 'hsl(0 0% 98%)' },
+            card: { DEFAULT: 'hsl(240 10% 3.9%)', foreground: 'hsl(0 0% 98%)' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body { background: hsl(240 10% 3.9%); color: hsl(0 0% 98%); }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: hsl(240 10% 3.9%); }
+    ::-webkit-scrollbar-thumb { background: hsl(240 3.7% 25%); border-radius: 2px; }
+
+    /* Hero Spotlight */
+    .spotlight-hero {
+      position: relative;
+      height: 85vh;
+      min-height: 500px;
+      overflow: hidden;
+    }
+    .spotlight-bg {
+      position: absolute; inset: 0;
+      background-size: cover;
+      background-position: center top;
+      transition: opacity 0.8s ease;
+    }
+    .spotlight-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to right, hsl(240 10% 3.9%) 30%, transparent 70%),
+                  linear-gradient(to top, hsl(240 10% 3.9%) 15%, transparent 60%);
+    }
+    .spotlight-content {
+      position: absolute;
+      bottom: 80px; left: 60px;
+      max-width: 550px;
+      z-index: 10;
+    }
+    @media (max-width: 768px) {
+      .spotlight-content { left: 20px; right: 20px; bottom: 60px; max-width: none; }
+      .spotlight-hero { height: 65vh; }
+    }
+
+    /* Cards */
+    .anime-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .anime-card:hover { transform: translateY(-4px); }
+    .anime-card img { transition: filter 0.2s ease; }
+    .anime-card:hover img { filter: brightness(1.1); }
+
+    /* Scroll container */
+    .scroll-row { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; scroll-snap-type: x mandatory; }
+    .scroll-row::-webkit-scrollbar { height: 3px; }
+    .scroll-row::-webkit-scrollbar-thumb { background: hsl(240 3.7% 25%); border-radius: 2px; }
+    .scroll-item { scroll-snap-align: start; flex-shrink: 0; }
+
+    /* Dots */
+    .spotlight-dot { width: 8px; height: 8px; border-radius: 50%; background: hsl(240 3.7% 40%); cursor: pointer; transition: all 0.2s; }
+    .spotlight-dot.active { background: white; width: 20px; border-radius: 4px; }
+
+    /* Badge */
+    .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* Bottom nav */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; background: hsla(240 10% 3.9% / 0.95); backdrop-filter: blur(16px); border-top: 1px solid hsl(240 3.7% 15.9%); }
+
+    /* Skeleton */
+    .skeleton { background: linear-gradient(90deg, hsl(240 3.7% 13%) 25%, hsl(240 3.7% 18%) 50%, hsl(240 3.7% 13%) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+    /* Fade in */
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fadeUp 0.5s ease forwards; }
+
+    /* Search overlay */
+    .search-overlay { position: fixed; inset: 0; background: hsla(240 10% 3.9% / 0.95); backdrop-filter: blur(16px); z-index: 100; display: none; }
+    .search-overlay.open { display: flex; flex-direction: column; }
+
+    /* Desktop warning - hidden by default */
+    .desktop-warning { display: none; }
+    @media (min-width: 1024px) { .desktop-warning { display: flex; } }
+  </style>
+</head>
+<body class="min-h-screen pb-20">
+
+  <!-- Desktop Warning -->
+  <div class="desktop-warning fixed inset-0 z-[200] bg-background flex-col items-center justify-center text-center p-8">
+    <div class="max-w-md">
+      <div class="text-6xl mb-6">📱</div>
+      <h1 class="text-2xl font-bold mb-3">Mobile Experience</h1>
+      <p class="text-muted-foreground mb-6">KiroBox is designed for mobile devices. For the best experience, please use your phone or tablet, or resize your browser to mobile width.</p>
+      <button onclick="document.querySelector('.desktop-warning').style.display='none'" class="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
+        Continue Anyway
+      </button>
+    </div>
+  </div>
+
+  <!-- Search Overlay -->
+  <div id="searchOverlay" class="search-overlay">
+    <div class="flex items-center gap-3 p-4 border-b border-border">
+      <button onclick="closeSearch()" class="text-muted-foreground">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="m12 5-7 7 7 7"/></svg>
+      </button>
+      <input id="searchInput" type="text" placeholder="Search anime..." class="flex-1 bg-transparent text-foreground text-base outline-none placeholder:text-muted-foreground" oninput="handleSearch(this.value)" />
+      <button onclick="document.getElementById('searchInput').value='';handleSearch('')" class="text-muted-foreground">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="searchResults" class="flex-1 overflow-y-auto p-4">
+      <p class="text-muted-foreground text-sm text-center mt-8">Start typing to search...</p>
+    </div>
+  </div>
+
+  <!-- Top Bar -->
+  <header class="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 pt-3 pb-2" style="background: linear-gradient(to bottom, hsla(240 10% 3.9% / 0.9) 0%, transparent 100%);">
+    <a href="/index.html" class="font-black text-xl tracking-tight">KIRO<span class="text-muted-foreground font-light">BOX</span></a>
+    <div class="flex items-center gap-3">
+      <button onclick="openSearch()" class="w-9 h-9 flex items-center justify-center rounded-full bg-secondary/50">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Spotlight Hero -->
+    <section class="spotlight-hero" id="heroSection">
+      <div class="spotlight-bg" id="heroBg"></div>
+      <div class="spotlight-overlay"></div>
+      <div class="spotlight-content fade-up" id="heroContent">
+        <!-- Loaded dynamically -->
+        <div class="skeleton h-3 w-24 mb-4"></div>
+        <div class="skeleton h-8 w-80 mb-3"></div>
+        <div class="skeleton h-4 w-64 mb-2"></div>
+        <div class="skeleton h-4 w-48 mb-6"></div>
+        <div class="flex gap-3">
+          <div class="skeleton h-10 w-28 rounded-lg"></div>
+          <div class="skeleton h-10 w-24 rounded-lg"></div>
+        </div>
+      </div>
+      <!-- Dots -->
+      <div class="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-10" id="spotlightDots"></div>
+    </section>
+
+    <!-- Sections -->
+    <div class="px-4 mt-2 space-y-8 pb-4">
+
+      <!-- Trending -->
+      <section id="trendingSection">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-bold text-base">Trending Now</h2>
+          <a href="/browse.html?section=trending" class="text-xs text-muted-foreground">View all</a>
+        </div>
+        <div class="scroll-row" id="trendingRow">
+          <div class="scroll-item skeleton w-32 h-48 rounded-lg"></div>
+          <div class="scroll-item skeleton w-32 h-48 rounded-lg"></div>
+          <div class="scroll-item skeleton w-32 h-48 rounded-lg"></div>
+          <div class="scroll-item skeleton w-32 h-48 rounded-lg"></div>
+        </div>
+      </section>
+
+      <!-- Top Airing -->
+      <section id="topAiringSection">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-bold text-base">Top Airing</h2>
+          <a href="/browse.html?section=airing" class="text-xs text-muted-foreground">View all</a>
+        </div>
+        <div class="scroll-row" id="topAiringRow">
+          <div class="scroll-item skeleton w-32 h-48 rounded-lg"></div>
+          <div class="scroll-item skeleton w-32 h-48 rounded-lg"></div>
+          <div class="scroll-item skeleton w-32 h-48 rounded-lg"></div>
+          <div class="scroll-item skeleton w-32 h-48 rounded-lg"></div>
+        </div>
+      </section>
+
+      <!-- Most Popular -->
+      <section id="mostPopularSection">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-bold text-base">Most Popular</h2>
+          <a href="/browse.html?section=popular" class="text-xs text-muted-foreground">View all</a>
+        </div>
+        <div class="scroll-row" id="mostPopularRow">
+          <div class="scroll-item skeleton w-32 h-48 rounded-lg"></div>
+          <div class="scroll-item skeleton w-32 h-48 rounded-lg"></div>
+          <div class="scroll-item skeleton w-32 h-48 rounded-lg"></div>
+          <div class="scroll-item skeleton w-32 h-48 rounded-lg"></div>
+        </div>
+      </section>
+
+      <!-- Latest Updates REMOVED -->
+
+    </div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <div class="flex items-center justify-around py-2">
+      <a href="/index.html" class="flex flex-col items-center gap-1 px-4 py-1 text-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        <span class="text-[10px] font-medium">Home</span>
+      </a>
+      <a href="/browse.html" class="flex flex-col items-center gap-1 px-4 py-1 text-muted-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="7" height="7"/><rect x="15" y="3" width="7" height="7"/><rect x="2" y="14" width="7" height="7"/><rect x="15" y="14" width="7" height="7"/></svg>
+        <span class="text-[10px] font-medium">Browse</span>
+      </a>
+      <a id="navProfile" href="/profile.html" class="flex flex-col items-center gap-1 px-4 py-1 text-muted-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="text-[10px] font-medium">Profile</span>
+      </a>
+    </div>
+  </nav>
+
+  <script>
+    const API = 'https://kirobox-api-0kfe.onrender.com';
+    let spotlightData = [];
+    let currentSpotlight = 0;
+    let spotlightTimer = null;
+
+    // Auth check - show avatar in bottom nav profile
+    function checkAuth() {
+      const token = localStorage.getItem('kirobox_token');
+      const username = localStorage.getItem('kirobox_username');
+      if (token && username) {
+        const navProfile = document.getElementById('navProfile');
+        navProfile.innerHTML = `
+          <img src="https://api.dicebear.com/7.x/initials/svg?seed=${username}&backgroundColor=ffffff&fontFamily=Inter&bold=true&radius=50" class="w-6 h-6 rounded-full" alt="${username}" />
+          <span class="text-[10px] font-medium">Profile</span>`;
+      }
+    }
+
+    // Spotlight
+    function renderSpotlight(anime) {
+      const bg = document.getElementById('heroBg');
+      const content = document.getElementById('heroContent');
+      bg.style.backgroundImage = `url(${anime.bannerImage || anime.coverImage})`;
+
+      const title = anime.title?.english || anime.title?.romaji || 'Unknown';
+      const desc = anime.description?.replace(/<[^>]+>/g, '').substring(0, 120) + '...' || '';
+      const score = anime.averageScore ? `★ ${anime.averageScore}` : '';
+      const year = anime.seasonYear || '';
+
+      content.innerHTML = `
+        <div class="fade-up">
+          <div class="flex items-center gap-2 mb-3">
+            ${anime.status === 'RELEASING' ? '<span class="badge bg-white text-black">Airing</span>' : ''}
+            ${score ? `<span class="text-yellow-400 text-sm font-semibold">${score}</span>` : ''}
+            ${year ? `<span class="text-muted-foreground text-sm">${year}</span>` : ''}
+          </div>
+          <h1 class="text-2xl font-black leading-tight mb-2" style="text-shadow: 0 2px 8px rgba(0,0,0,0.5)">${title}</h1>
+          <p class="text-sm text-gray-300 mb-4 leading-relaxed" style="text-shadow: 0 1px 4px rgba(0,0,0,0.7)">${desc}</p>
+          <div class="flex gap-3 flex-wrap">
+            ${anime.genres?.slice(0,2).map(g => `<span class="text-xs border border-white/30 text-white/70 px-2 py-1 rounded">${g}</span>`).join('') || ''}
+          </div>
+          <div class="flex gap-3 mt-4">
+            <a href="/anime.html?id=${anime.anilistId}" class="flex items-center gap-2 bg-white text-black px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-white/90 transition-colors">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              Watch Now
+            </a>
+            <a href="/anime.html?id=${anime.anilistId}" class="flex items-center gap-2 bg-white/10 text-white px-4 py-2.5 rounded-lg font-semibold text-sm hover:bg-white/20 transition-colors border border-white/20">
+              Details
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDots() {
+      const dots = document.getElementById('spotlightDots');
+      dots.innerHTML = spotlightData.map((_, i) =>
+        `<div class="spotlight-dot ${i === currentSpotlight ? 'active' : ''}" onclick="goToSpotlight(${i})"></div>`
+      ).join('');
+    }
+
+    function goToSpotlight(index) {
+      currentSpotlight = index;
+      renderSpotlight(spotlightData[index]);
+      renderDots();
+      clearInterval(spotlightTimer);
+      spotlightTimer = setInterval(nextSpotlight, 5000);
+    }
+
+    function nextSpotlight() {
+      currentSpotlight = (currentSpotlight + 1) % spotlightData.length;
+      renderSpotlight(spotlightData[currentSpotlight]);
+      renderDots();
+    }
+
+    // Anime Card
+    function animeCard(anime) {
+      const title = anime.title?.english || anime.title?.romaji || 'Unknown';
+      const score = anime.averageScore ? `★ ${anime.averageScore}` : '';
+      const epCount = anime.totalEpisodes ? `${anime.totalEpisodes} EP` : '';
+      return `
+        <a href="/anime.html?id=${anime.anilistId}" class="scroll-item anime-card block" style="width:128px">
+          <div class="relative rounded-lg overflow-hidden" style="aspect-ratio:2/3">
+            <img src="${anime.coverImage}" alt="${title}" class="w-full h-full object-cover" loading="lazy" onerror="this.src='/placeholder.svg'" />
+            ${score ? `<div class="absolute top-1.5 left-1.5 bg-black/70 text-yellow-400 text-[10px] font-bold px-1.5 py-0.5 rounded backdrop-blur-sm">${score}</div>` : ''}
+            ${anime.status === 'RELEASING' ? '<div class="absolute top-1.5 right-1.5 w-2 h-2 bg-green-400 rounded-full shadow-lg shadow-green-400/50"></div>' : ''}
+          </div>
+          <div class="mt-1.5 px-0.5">
+            <p class="text-xs font-medium leading-tight truncate">${title}</p>
+            ${epCount ? `<p class="text-[10px] text-muted-foreground mt-0.5">${epCount}</p>` : ''}
+          </div>
+        </a>`;
+    }
+
+    function renderRow(id, items) {
+      const el = document.getElementById(id);
+      if (!items || items.length === 0) {
+        el.innerHTML = '<p class="text-muted-foreground text-sm">Nothing here yet.</p>';
+        return;
+      }
+      el.innerHTML = items.map(animeCard).join('');
+    }
+
+    async function loadHome() {
+      try {
+        const res = await fetch(`${API}/api/home`);
+        const data = await res.json();
+
+        if (data.spotlight?.length) {
+          spotlightData = data.spotlight;
+          renderSpotlight(spotlightData[0]);
+          renderDots();
+          spotlightTimer = setInterval(nextSpotlight, 5000);
+        } else {
+          document.getElementById('heroContent').innerHTML = '<h1 class="text-2xl font-black">Welcome to KiroBox</h1><p class="text-muted-foreground mt-2">Your anime streaming destination</p>';
+        }
+
+        renderRow('trendingRow', data.trending);
+        renderRow('topAiringRow', data.topAiring);
+        renderRow('mostPopularRow', data.mostPopular);
+      } catch(e) {
+        console.error('Home load error:', e);
+      }
+    }
+
+    // Search
+    let searchTimeout;
+    function openSearch() {
+      document.getElementById('searchOverlay').classList.add('open');
+      setTimeout(() => document.getElementById('searchInput').focus(), 100);
+    }
+    function closeSearch() {
+      document.getElementById('searchOverlay').classList.remove('open');
+    }
+
+    async function handleSearch(q) {
+      clearTimeout(searchTimeout);
+      const results = document.getElementById('searchResults');
+      if (!q.trim()) {
+        results.innerHTML = '<p class="text-muted-foreground text-sm text-center mt-8">Start typing to search...</p>';
+        return;
+      }
+      results.innerHTML = '<div class="flex justify-center mt-8"><div class="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div></div>';
+
+      searchTimeout = setTimeout(async () => {
+        try {
+          const res = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}`);
+          const data = await res.json();
+          if (!data.length) {
+            results.innerHTML = '<p class="text-muted-foreground text-sm text-center mt-8">No results found</p>';
+            return;
+          }
+          results.innerHTML = data.map(a => {
+            const title = a.title?.english || a.title?.romaji || 'Unknown';
+            return `
+              <a href="/anime.html?id=${a.anilistId}" onclick="closeSearch()" class="flex gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors mb-1">
+                <img src="${a.coverImage}" class="w-14 rounded-md object-cover" style="aspect-ratio:2/3" alt="${title}" />
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium text-sm truncate">${title}</p>
+                  <p class="text-xs text-muted-foreground mt-1">${a.genres?.slice(0,2).join(', ') || ''}</p>
+                  ${a.averageScore ? `<p class="text-xs text-yellow-400 mt-1">★ ${a.averageScore}</p>` : ''}
+                </div>
+              </a>`;
+          }).join('');
+        } catch(e) {
+          results.innerHTML = '<p class="text-muted-foreground text-sm text-center mt-8">Search failed</p>';
+        }
+      }, 400);
+    }
+
+    // Init
+    checkAuth();
+    loadHome();
+  </script>
+</body>
+</html>
