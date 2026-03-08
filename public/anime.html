@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anime - KiroBox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { inter: ['Inter', 'sans-serif'] },
+          colors: {
+            border: 'hsl(240 3.7% 15.9%)',
+            background: 'hsl(240 10% 3.9%)',
+            foreground: 'hsl(0 0% 98%)',
+            muted: { DEFAULT: 'hsl(240 3.7% 15.9%)', foreground: 'hsl(240 5% 64.9%)' },
+            secondary: { DEFAULT: 'hsl(240 3.7% 15.9%)', foreground: 'hsl(0 0% 98%)' },
+            card: { DEFAULT: 'hsl(240 5% 8%)', foreground: 'hsl(0 0% 98%)' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body { background: hsl(240 10% 3.9%); color: hsl(0 0% 98%); }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: hsl(240 3.7% 25%); border-radius: 2px; }
+
+    .banner {
+      position: relative; height: 250px;
+      background-size: cover; background-position: center;
+    }
+    .banner-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, transparent 20%, hsl(240 10% 3.9%) 100%);
+    }
+
+    .tab-btn { padding: 8px 16px; font-size: 13px; font-weight: 500; border-bottom: 2px solid transparent; color: hsl(240 5% 64.9%); transition: all 0.2s; }
+    .tab-btn.active { color: hsl(0 0% 98%); border-bottom-color: white; }
+
+    .ep-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px;
+      border-radius: 8px;
+      border: 1px solid hsl(240 3.7% 20%);
+      background: hsl(240 5% 8%);
+      font-size: 13px; font-weight: 600;
+      color: hsl(0 0% 98%);
+      cursor: pointer; transition: all 0.15s;
+      text-decoration: none;
+    }
+    .ep-btn:hover, .ep-btn.has-ep { background: hsl(240 3.7% 18%); border-color: hsl(240 3.7% 30%); }
+    .ep-btn.no-ep { opacity: 0.3; pointer-events: none; }
+
+    .action-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap-1;
+      padding: 10px 8px; border-radius: 10px;
+      border: 1px solid hsl(240 3.7% 18%); background: hsl(240 5% 7%);
+      font-size: 11px; color: hsl(240 5% 64.9%);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .action-btn.active { border-color: hsl(240 3.7% 35%); color: hsl(0 0% 98%); }
+    .action-btn:active { transform: scale(0.96); }
+
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; background: hsla(240 10% 3.9% / 0.95); backdrop-filter: blur(16px); border-top: 1px solid hsl(240 3.7% 15.9%); }
+    .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .skeleton { background: linear-gradient(90deg, hsl(240 3.7% 13%) 25%, hsl(240 3.7% 18%) 50%, hsl(240 3.7% 13%) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fadeUp 0.35s ease forwards; }
+
+    .desktop-warning { display: none; }
+    @media (min-width: 1024px) { .desktop-warning { display: flex; } }
+  </style>
+</head>
+<body class="min-h-screen pb-20">
+
+  <!-- Desktop Warning -->
+  <div class="desktop-warning fixed inset-0 z-[200] bg-background flex-col items-center justify-center text-center p-8">
+    <div class="max-w-md">
+      <div class="text-6xl mb-6">📱</div>
+      <h1 class="text-2xl font-bold mb-3">Mobile Experience</h1>
+      <p class="text-muted-foreground mb-6">KiroBox is designed for mobile devices.</p>
+      <button onclick="document.querySelector('.desktop-warning').style.display='none'" class="px-6 py-2.5 bg-white text-black rounded-lg font-medium text-sm">Continue Anyway</button>
+    </div>
+  </div>
+
+  <!-- Back nav -->
+  <div class="fixed top-0 left-0 right-0 z-40 flex items-center justify-between p-4" id="topBar" style="background: linear-gradient(to bottom, hsl(240 10% 3.9%) 0%, transparent 100%);">
+    <a href="javascript:history.back()" class="w-9 h-9 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="m12 5-7 7 7 7"/></svg>
+    </a>
+    <button onclick="shareAnime()" class="w-9 h-9 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    </button>
+  </div>
+
+  <!-- Content -->
+  <div id="mainContent">
+    <!-- Loading skeleton -->
+    <div class="skeleton w-full" style="height:250px"></div>
+    <div class="px-4 pt-4 space-y-3">
+      <div class="skeleton h-6 w-3/4"></div>
+      <div class="skeleton h-4 w-1/2"></div>
+      <div class="skeleton h-16 w-full"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <div class="flex items-center justify-around py-2">
+      <a href="/index.html" class="flex flex-col items-center gap-1 px-4 py-1 text-muted-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="text-[10px] font-medium">Home</span>
+      </a>
+      <a href="/browse.html" class="flex flex-col items-center gap-1 px-4 py-1 text-muted-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="7" height="7"/><rect x="15" y="3" width="7" height="7"/><rect x="2" y="14" width="7" height="7"/><rect x="15" y="14" width="7" height="7"/></svg>
+        <span class="text-[10px] font-medium">Browse</span>
+      </a>
+      <a href="/profile.html" class="flex flex-col items-center gap-1 px-4 py-1 text-muted-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="text-[10px] font-medium">Profile</span>
+      </a>
+    </div>
+  </nav>
+
+  <script>
+    const API = 'https://kirobox-api-0kfe.onrender.com';
+    const params = new URLSearchParams(window.location.search);
+    const animeId = params.get('id');
+    let animeData = null;
+    let currentTab = 'episodes';
+    let currentLanguage = 'sub';
+    const token = localStorage.getItem('kirobox_token');
+
+    if (!animeId) window.location.href = '/index.html';
+
+    function statusBadge(status) {
+      const map = { RELEASING: ['bg-green-500/20 text-green-400 border border-green-500/30', 'Airing'], FINISHED: ['bg-secondary text-muted-foreground border border-border', 'Finished'], NOT_YET_RELEASED: ['bg-blue-500/20 text-blue-400 border border-blue-500/30', 'Upcoming'] };
+      const [cls, label] = map[status] || ['bg-secondary text-muted-foreground border border-border', status];
+      return `<span class="badge ${cls}">${label}</span>`;
+    }
+
+    function formatDate(d) {
+      if (!d || !d.year) return '';
+      return `${d.year}${d.month ? '-' + String(d.month).padStart(2,'0') : ''}${d.day ? '-' + String(d.day).padStart(2,'0') : ''}`;
+    }
+
+    async function loadAnime() {
+      try {
+        const headers = token ? { 'Authorization': token } : {};
+        const res = await fetch(`${API}/api/anime/${animeId}`, { headers });
+        if (!res.ok) throw new Error('Not found');
+        animeData = await res.json();
+        renderAnime();
+        // Track view
+        fetch(`${API}/api/anime/${animeId}/view`, { method: 'POST' });
+      } catch(e) {
+        document.getElementById('mainContent').innerHTML = `
+          <div class="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
+            <p class="text-muted-foreground mb-4">Anime not found</p>
+            <a href="/index.html" class="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium">Go Home</a>
+          </div>`;
+      }
+    }
+
+    function getAvailableLanguages(episodes) {
+      return [...new Set(episodes.map(e => e.language))];
+    }
+
+    function renderAnime() {
+      const a = animeData;
+      const title = a.title?.english || a.title?.romaji || 'Unknown';
+      const langs = getAvailableLanguages(a.episodes || []);
+      if (langs.length && !langs.includes(currentLanguage)) currentLanguage = langs[0];
+
+      const eps = (a.episodes || []).filter(e => e.language === currentLanguage).sort((x,y) => x.number - y.number);
+      const totalEps = a.totalEpisodes || 0;
+      const allEpNums = new Set(eps.map(e => e.number));
+
+      document.getElementById('mainContent').innerHTML = `
+        <div class="fade-up">
+          <!-- Banner -->
+          <div class="banner" style="background-image: url('${a.bannerImage || a.coverImage}')">
+            <div class="banner-overlay"></div>
+          </div>
+
+          <!-- Info card -->
+          <div class="px-4 -mt-16 relative z-10">
+            <div class="flex gap-4">
+              <img src="${a.coverImage}" alt="${title}" class="w-24 rounded-xl shadow-2xl flex-shrink-0" style="aspect-ratio:2/3; object-fit:cover" />
+              <div class="pt-10 flex-1 min-w-0">
+                <h1 class="font-black text-lg leading-tight">${title}</h1>
+                ${a.title?.romaji && a.title?.romaji !== title ? `<p class="text-xs text-muted-foreground mt-0.5">${a.title.romaji}</p>` : ''}
+                <div class="flex items-center flex-wrap gap-2 mt-2">
+                  ${statusBadge(a.status)}
+                  ${a.averageScore ? `<span class="text-yellow-400 text-xs font-semibold">★ ${a.averageScore}</span>` : ''}
+                  ${a.format ? `<span class="text-xs text-muted-foreground">${a.format}</span>` : ''}
+                </div>
+              </div>
+            </div>
+
+            <!-- Stats row -->
+            <div class="flex gap-4 mt-4 pb-4 border-b border-border overflow-x-auto">
+              ${a.seasonYear ? `<div class="text-center flex-shrink-0"><p class="text-xs text-muted-foreground">Year</p><p class="text-sm font-semibold mt-0.5">${a.seasonYear}</p></div>` : ''}
+              ${totalEps ? `<div class="text-center flex-shrink-0"><p class="text-xs text-muted-foreground">Episodes</p><p class="text-sm font-semibold mt-0.5">${totalEps}</p></div>` : ''}
+              ${a.duration ? `<div class="text-center flex-shrink-0"><p class="text-xs text-muted-foreground">Duration</p><p class="text-sm font-semibold mt-0.5">${a.duration}m</p></div>` : ''}
+              ${a.studios?.length ? `<div class="text-center flex-shrink-0"><p class="text-xs text-muted-foreground">Studio</p><p class="text-sm font-semibold mt-0.5">${a.studios[0]}</p></div>` : ''}
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex gap-2 mt-4" id="actionButtons">
+              <button onclick="toggleMyList()" id="myListBtn" class="action-btn ${a.inMyList ? 'active' : ''}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="${a.inMyList ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                <span>${a.inMyList ? 'In List' : 'My List'}</span>
+              </button>
+              <button onclick="toggleWatchlist()" id="watchlistBtn" class="action-btn ${a.inWatchlist ? 'active' : ''}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>${a.inWatchlist ? 'Watching' : 'Watchlist'}</span>
+              </button>
+              <button onclick="toggleFavorite()" id="favBtn" class="action-btn ${a.inFavorites ? 'active' : ''}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="${a.inFavorites ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <span>${a.inFavorites ? 'Favorited' : 'Favorite'}</span>
+              </button>
+              <button onclick="requestWishlist()" id="wishlistBtn" class="action-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span>Request</span>
+              </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-border mt-5 -mx-4 px-4">
+              <button class="tab-btn active" onclick="switchTab('episodes',this)" id="tabEpisodes">Episodes</button>
+              <button class="tab-btn" onclick="switchTab('info',this)" id="tabInfo">Info</button>
+              ${a.genres?.length ? `<button class="tab-btn" onclick="switchTab('related',this)" id="tabRelated">More</button>` : ''}
+            </div>
+
+            <!-- Tab Content -->
+            <div id="tabContent" class="mt-4 pb-4">
+              ${renderEpisodesTab(eps, langs, totalEps, allEpNums)}
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function renderEpisodesTab(eps, langs, totalEps, allEpNums) {
+      const langBtns = langs.map(l => `
+        <button onclick="switchLang('${l}')" class="px-3 py-1.5 text-xs font-medium rounded-lg border ${currentLanguage === l ? 'bg-white text-black border-white' : 'border-border text-muted-foreground hover:text-foreground'} transition-colors">
+          ${l === 'sub' ? 'Sub' : l === 'english-dub' ? 'ENG Dub' : l === 'tagalog-dub' ? 'TL Dub' : l}
+        </button>`).join('');
+
+      if (!eps.length) {
+        return `
+          <div class="flex flex-col items-center py-12 text-center">
+            ${langs.length ? `<div class="flex gap-2 mb-6 flex-wrap justify-center">${langBtns}</div>` : ''}
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground mb-3"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/></svg>
+            <p class="text-muted-foreground text-sm">No episodes available yet</p>
+          </div>`;
+      }
+
+      // Generate episode grid (1-totalEps or just available)
+      const maxEp = Math.max(totalEps || 0, eps.length > 0 ? Math.max(...eps.map(e => e.number)) : 0);
+      let epGrid = '';
+      if (maxEp <= 100) {
+        for (let i = 1; i <= maxEp; i++) {
+          const ep = eps.find(e => e.number === i);
+          if (ep) {
+            epGrid += `<a href="/watch.html?id=${animeId}&ep=${ep._id}&num=${i}&lang=${currentLanguage}" class="ep-btn has-ep">${i}</a>`;
+          } else {
+            epGrid += `<div class="ep-btn no-ep">${i}</div>`;
+          }
+        }
+      } else {
+        // For large episode counts, just list available
+        eps.forEach(ep => {
+          epGrid += `<a href="/watch.html?id=${animeId}&ep=${ep._id}&num=${ep.number}&lang=${currentLanguage}" class="ep-btn has-ep">${ep.number}</a>`;
+        });
+      }
+
+      return `
+        <div>
+          ${langs.length > 1 ? `<div class="flex gap-2 mb-4 flex-wrap">${langBtns}</div>` : ''}
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-xs text-muted-foreground">${eps.length} episode${eps.length !== 1 ? 's' : ''} available</p>
+          </div>
+          <div class="grid gap-2" style="grid-template-columns: repeat(auto-fill, minmax(44px, 1fr))">
+            ${epGrid}
+          </div>
+        </div>`;
+    }
+
+    function renderInfoTab() {
+      const a = animeData;
+      const desc = a.description?.replace(/<[^>]+>/g, '') || 'No description available.';
+      return `
+        <div class="space-y-4 fade-up">
+          <div>
+            <p class="text-sm leading-relaxed text-gray-300">${desc}</p>
+          </div>
+          ${a.genres?.length ? `
+          <div>
+            <p class="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">Genres</p>
+            <div class="flex flex-wrap gap-2">
+              ${a.genres.map(g => `<a href="/browse.html?genre=${encodeURIComponent(g)}" class="px-3 py-1 text-xs border border-border rounded-full hover:bg-secondary transition-colors">${g}</a>`).join('')}
+            </div>
+          </div>` : ''}
+          <div class="grid grid-cols-2 gap-3">
+            ${a.seasonYear ? `<div class="p-3 rounded-lg bg-card"><p class="text-xs text-muted-foreground">Year</p><p class="text-sm font-semibold mt-1">${a.seasonYear}</p></div>` : ''}
+            ${a.season ? `<div class="p-3 rounded-lg bg-card"><p class="text-xs text-muted-foreground">Season</p><p class="text-sm font-semibold mt-1">${a.season}</p></div>` : ''}
+            ${a.source ? `<div class="p-3 rounded-lg bg-card"><p class="text-xs text-muted-foreground">Source</p><p class="text-sm font-semibold mt-1">${a.source}</p></div>` : ''}
+            ${a.format ? `<div class="p-3 rounded-lg bg-card"><p class="text-xs text-muted-foreground">Format</p><p class="text-sm font-semibold mt-1">${a.format}</p></div>` : ''}
+            ${a.startDate?.year ? `<div class="p-3 rounded-lg bg-card"><p class="text-xs text-muted-foreground">Start Date</p><p class="text-sm font-semibold mt-1">${formatDate(a.startDate)}</p></div>` : ''}
+            ${a.endDate?.year ? `<div class="p-3 rounded-lg bg-card"><p class="text-xs text-muted-foreground">End Date</p><p class="text-sm font-semibold mt-1">${formatDate(a.endDate)}</p></div>` : ''}
+          </div>
+          ${a.studios?.length ? `
+          <div>
+            <p class="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">Studios</p>
+            <div class="flex flex-wrap gap-2">
+              ${a.studios.map(s => `<span class="px-3 py-1 text-xs border border-border rounded-full">${s}</span>`).join('')}
+            </div>
+          </div>` : ''}
+          ${a.tags?.length ? `
+          <div>
+            <p class="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">Tags</p>
+            <div class="flex flex-wrap gap-2">
+              ${a.tags.slice(0,8).map(t => `<span class="px-2 py-1 text-xs bg-secondary rounded-md">${t.name}</span>`).join('')}
+            </div>
+          </div>` : ''}
+        </div>`;
+    }
+
+    function renderMoreTab() {
+      const a = animeData;
+      return `
+        <div class="space-y-4 fade-up">
+          ${a.externalLinks?.length ? `
+          <div>
+            <p class="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wide">External Links</p>
+            <div class="space-y-2">
+              ${a.externalLinks.map(l => `
+                <a href="${l.url}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-secondary transition-colors">
+                  <span class="text-sm font-medium">${l.site}</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted-foreground"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>`).join('')}
+            </div>
+          </div>` : ''}
+          ${a.trailer?.id ? `
+          <div>
+            <p class="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wide">Trailer</p>
+            <div style="position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden">
+              <iframe src="https://www.youtube.com/embed/${a.trailer.id}" style="position:absolute;inset:0;width:100%;height:100%;border:none" allowfullscreen></iframe>
+            </div>
+          </div>` : ''}
+          ${a.viewCount ? `
+          <div class="p-3 rounded-lg border border-border">
+            <p class="text-xs text-muted-foreground">Total Views</p>
+            <p class="text-xl font-black mt-1">${a.viewCount.toLocaleString()}</p>
+          </div>` : ''}
+        </div>`;
+    }
+
+    function switchTab(tab, el) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+
+      const content = document.getElementById('tabContent');
+      if (tab === 'episodes') {
+        const langs = getAvailableLanguages(animeData?.episodes || []);
+        const eps = (animeData?.episodes || []).filter(e => e.language === currentLanguage).sort((x,y) => x.number - y.number);
+        const allEpNums = new Set(eps.map(e => e.number));
+        content.innerHTML = renderEpisodesTab(eps, langs, animeData?.totalEpisodes || 0, allEpNums);
+      } else if (tab === 'info') {
+        content.innerHTML = renderInfoTab();
+      } else if (tab === 'related') {
+        content.innerHTML = renderMoreTab();
+      }
+    }
+
+    function switchLang(lang) {
+      currentLanguage = lang;
+      const langs = getAvailableLanguages(animeData?.episodes || []);
+      const eps = (animeData?.episodes || []).filter(e => e.language === lang).sort((x,y) => x.number - y.number);
+      const allEpNums = new Set(eps.map(e => e.number));
+      document.getElementById('tabContent').innerHTML = renderEpisodesTab(eps, langs, animeData?.totalEpisodes || 0, allEpNums);
+    }
+
+    async function requireAuth() {
+      if (!token) {
+        window.location.href = `/login.html?redirect=${encodeURIComponent(window.location.href)}`;
+        return false;
+      }
+      return true;
+    }
+
+    async function toggleMyList() {
+      if (!await requireAuth()) return;
+      const inList = animeData.inMyList;
+      const url = inList ? '/api/user/mylist/remove' : '/api/user/mylist/add';
+      try {
+        await fetch(`${API}${url}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': token }, body: JSON.stringify({ anilistId: parseInt(animeId) }) });
+        animeData.inMyList = !inList;
+        const btn = document.getElementById('myListBtn');
+        btn.classList.toggle('active', animeData.inMyList);
+        btn.querySelector('span').textContent = animeData.inMyList ? 'In List' : 'My List';
+        btn.querySelector('svg').setAttribute('fill', animeData.inMyList ? 'currentColor' : 'none');
+      } catch(e) {}
+    }
+
+    async function toggleWatchlist() {
+      if (!await requireAuth()) return;
+      const inList = animeData.inWatchlist;
+      const url = inList ? '/api/user/watchlist/remove' : '/api/user/watchlist/add';
+      try {
+        await fetch(`${API}${url}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': token }, body: JSON.stringify({ anilistId: parseInt(animeId) }) });
+        animeData.inWatchlist = !inList;
+        const btn = document.getElementById('watchlistBtn');
+        btn.classList.toggle('active', animeData.inWatchlist);
+        btn.querySelector('span').textContent = animeData.inWatchlist ? 'Watching' : 'Watchlist';
+      } catch(e) {}
+    }
+
+    async function toggleFavorite() {
+      if (!await requireAuth()) return;
+      const inFav = animeData.inFavorites;
+      const url = inFav ? '/api/user/favorites/remove' : '/api/user/favorites/add';
+      try {
+        await fetch(`${API}${url}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': token }, body: JSON.stringify({ anilistId: parseInt(animeId) }) });
+        animeData.inFavorites = !inFav;
+        const btn = document.getElementById('favBtn');
+        btn.classList.toggle('active', animeData.inFavorites);
+        btn.querySelector('span').textContent = animeData.inFavorites ? 'Favorited' : 'Favorite';
+        btn.querySelector('svg').setAttribute('fill', animeData.inFavorites ? 'currentColor' : 'none');
+      } catch(e) {}
+    }
+
+    async function requestWishlist() {
+      if (!await requireAuth()) return;
+      try {
+        const res = await fetch(`${API}/api/user/wishlist-request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': token },
+          body: JSON.stringify({ anilistId: parseInt(animeId), animeTitle: animeData.title?.english || animeData.title?.romaji, animeCoverImage: animeData.coverImage })
+        });
+        const data = await res.json();
+        showToast(data.message || 'Request sent!');
+      } catch(e) { showToast('Request failed'); }
+    }
+
+    function shareAnime() {
+      if (navigator.share && animeData) {
+        navigator.share({ title: animeData.title?.english || animeData.title?.romaji, url: window.location.href });
+      } else {
+        navigator.clipboard?.writeText(window.location.href);
+        showToast('Link copied!');
+      }
+    }
+
+    function showToast(msg) {
+      const t = document.createElement('div');
+      t.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-foreground text-background text-sm font-medium px-4 py-2 rounded-full z-50 shadow-lg';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 2500);
+    }
+
+    loadAnime();
+  </script>
+</body>
+</html>
