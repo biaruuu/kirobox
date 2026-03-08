@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile - KiroBox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { inter: ['Inter', 'sans-serif'] },
+          colors: {
+            border: 'hsl(240 3.7% 15.9%)',
+            background: 'hsl(240 10% 3.9%)',
+            foreground: 'hsl(0 0% 98%)',
+            muted: { DEFAULT: 'hsl(240 3.7% 15.9%)', foreground: 'hsl(240 5% 64.9%)' },
+            secondary: { DEFAULT: 'hsl(240 3.7% 15.9%)', foreground: 'hsl(0 0% 98%)' },
+            card: { DEFAULT: 'hsl(240 5% 7%)', foreground: 'hsl(0 0% 98%)' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body { background: hsl(240 10% 3.9%); color: hsl(0 0% 98%); }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: hsl(240 3.7% 25%); border-radius: 2px; }
+
+    /* Discord-like banner */
+    .profile-banner {
+      height: 140px; width: 100%;
+      background: hsl(240 5% 12%);
+      background-size: cover; background-position: center;
+      position: relative;
+    }
+
+    /* Avatar with effects */
+    .avatar-wrap { position: relative; width: 80px; height: 80px; }
+    .avatar-ring {
+      position: absolute; inset: -4px;
+      border-radius: 50%;
+      padding: 4px;
+    }
+    .avatar-ring.effect-none { background: hsl(240 5% 20%); }
+    .avatar-ring.effect-white { background: white; }
+    .avatar-ring.effect-animated {
+      background: conic-gradient(#fff, #888, #fff, #888, #fff);
+      animation: rotate 3s linear infinite;
+    }
+    .avatar-ring.effect-pulse {
+      background: white;
+      animation: pulse-ring 2s ease-in-out infinite;
+    }
+    @keyframes rotate { to { transform: rotate(360deg); } }
+    @keyframes pulse-ring { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); } 50% { box-shadow: 0 0 0 6px rgba(255,255,255,0); } }
+
+    .avatar-img {
+      width: 80px; height: 80px; border-radius: 50%;
+      border: 3px solid hsl(240 10% 3.9%);
+      object-fit: cover; position: relative; z-index: 2;
+    }
+
+    /* Badge */
+    .profile-badge {
+      position: absolute; bottom: -2px; right: -2px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: hsl(240 10% 3.9%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; z-index: 3; border: 2px solid hsl(240 10% 3.9%);
+    }
+
+    /* Sticker */
+    .profile-sticker {
+      position: absolute; bottom: -10px; right: -16px;
+      width: 40px; height: 40px; z-index: 4;
+      border-radius: 50%; overflow: hidden;
+    }
+    .profile-sticker img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* Stats cards */
+    .stat-card {
+      flex: 1; padding: 12px 8px; border-radius: 12px;
+      background: hsl(240 5% 7%); border: 1px solid hsl(240 3.7% 14%);
+      text-align: center;
+    }
+
+    /* Tab system */
+    .tab-btn { flex: 1; padding: 10px 0; font-size: 13px; font-weight: 500; color: hsl(240 5% 64.9%); border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .tab-btn.active { color: hsl(0 0% 98%); border-bottom-color: white; }
+
+    /* Anime grid - fixed responsive cards */
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    @media (min-width: 400px) {
+      .mini-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    .mini-grid a .cover-wrap {
+      border-radius: 10px;
+      overflow: hidden;
+      aspect-ratio: 2/3;
+      background: hsl(240 5% 10%);
+      position: relative;
+    }
+    .mini-grid a .cover-wrap img {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: transform 0.2s ease;
+    }
+    .mini-grid a:hover .cover-wrap img { transform: scale(1.04); }
+    .mini-grid a .card-title {
+      font-size: 11px; font-weight: 600; line-height: 1.3;
+      margin-top: 5px; padding: 0 1px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      color: hsl(0 0% 90%);
+    }
+
+    /* Edit modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 100; display: none; align-items: flex-end; }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet { background: hsl(240 7% 7%); border-radius: 20px 20px 0 0; border: 1px solid hsl(240 3.7% 16%); border-bottom: none; width: 100%; max-height: 85vh; overflow-y: auto; padding: 24px 20px 40px; }
+    .modal-handle { width: 36px; height: 4px; background: hsl(240 3.7% 25%); border-radius: 2px; margin: 0 auto 20px; }
+
+    /* MUI fields */
+    .mui-field { position: relative; margin-bottom: 18px; }
+    .mui-field input, .mui-field textarea {
+      width: 100%; padding: 20px 14px 8px;
+      background: hsl(240 3.7% 10%);
+      border: 1px solid hsl(240 3.7% 22%);
+      border-radius: 8px; color: hsl(0 0% 98%);
+      font-size: 15px; outline: none; transition: border-color 0.2s; box-sizing: border-box; resize: none;
+    }
+    .mui-field input:focus, .mui-field textarea:focus { border-color: hsl(0 0% 60%); }
+    .mui-field label { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: hsl(240 5% 64.9%); font-size: 15px; pointer-events: none; transition: all 0.2s ease; }
+    .mui-field textarea ~ label { top: 22px; transform: none; }
+    .mui-field input:focus ~ label, .mui-field input:not(:placeholder-shown) ~ label,
+    .mui-field textarea:focus ~ label, .mui-field textarea:not(:placeholder-shown) ~ label {
+      top: 10px; transform: translateY(0); font-size: 11px; color: hsl(0 0% 60%); font-weight: 500;
+    }
+
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; background: hsla(240 10% 3.9% / 0.95); backdrop-filter: blur(16px); border-top: 1px solid hsl(240 3.7% 15.9%); }
+    .scroll-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; }
+    .scroll-row::-webkit-scrollbar { height: 2px; }
+    .scroll-row::-webkit-scrollbar-thumb { background: hsl(240 3.7% 25%); }
+    .scroll-item { scroll-snap-align: start; flex-shrink: 0; }
+
+    .skeleton { background: linear-gradient(90deg, hsl(240 3.7% 13%) 25%, hsl(240 3.7% 18%) 50%, hsl(240 3.7% 13%) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fadeUp 0.35s ease forwards; }
+
+    .desktop-warning { display: none; }
+    @media (min-width: 1024px) { .desktop-warning { display: flex; } }
+  </style>
+</head>
+<body class="min-h-screen pb-20">
+
+  <!-- Desktop Warning -->
+  <div class="desktop-warning fixed inset-0 z-[200] bg-background flex-col items-center justify-center text-center p-8">
+    <div class="max-w-md">
+      <div class="text-6xl mb-6">📱</div>
+      <h1 class="text-2xl font-bold mb-3">Mobile Experience</h1>
+      <p class="text-muted-foreground mb-6">KiroBox is designed for mobile devices.</p>
+      <button onclick="document.querySelector('.desktop-warning').style.display='none'" class="px-6 py-2.5 bg-white text-black rounded-lg font-medium text-sm">Continue Anyway</button>
+    </div>
+  </div>
+
+  <!-- Not logged in state -->
+  <div id="notLoggedIn" class="hidden flex flex-col items-center justify-center min-h-[80vh] p-8 text-center">
+    <div class="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-6">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </div>
+    <h2 class="text-xl font-bold mb-2">Sign in to view profile</h2>
+    <p class="text-muted-foreground text-sm mb-6">Login or create an account to access your watchlist, favorites, and more.</p>
+    <div class="flex flex-col gap-3 w-full max-w-xs">
+      <a href="/login.html" class="py-3 bg-white text-black rounded-xl font-semibold text-sm text-center hover:bg-white/90 transition-colors">Login</a>
+      <a href="/signup.html" class="py-3 border border-border rounded-xl font-semibold text-sm text-center hover:bg-secondary transition-colors">Create Account</a>
+    </div>
+  </div>
+
+  <!-- Profile content -->
+  <div id="profileContent" class="hidden">
+
+    <!-- Banner -->
+    <div id="profileBanner" class="profile-banner">
+      <!-- Edit banner button -->
+      <button onclick="openEditModal()" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 1 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+    </div>
+
+    <!-- Avatar + info -->
+    <div class="px-4 -mt-10 relative z-10">
+      <div class="flex items-end justify-between mb-4">
+        <div class="relative">
+          <div class="avatar-wrap">
+            <div id="avatarRing" class="avatar-ring effect-white absolute inset-[-4px] rounded-full z-0"></div>
+            <img id="profileAvatar" src="" alt="avatar" class="avatar-img" />
+            <div id="profileBadgeEl" class="profile-badge hidden"></div>
+            <div id="profileStickerEl" class="profile-sticker hidden"><img src="" alt="" /></div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="logout()" class="px-3 py-2 text-xs font-semibold border border-border rounded-full hover:bg-secondary transition-colors text-muted-foreground">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Name & bio -->
+      <div class="mb-4">
+        <div class="flex items-center gap-2 flex-wrap">
+          <h1 id="profileName" class="font-black text-xl"></h1>
+          <span id="roleBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded border border-border text-muted-foreground uppercase tracking-wide"></span>
+        </div>
+        <p id="profileUsername" class="text-sm text-muted-foreground mt-0.5"></p>
+        <p id="profileBio" class="text-sm mt-2 leading-relaxed text-gray-300"></p>
+        <div class="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+          <span id="profileCountry"></span>
+          <span id="profileJoined"></span>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="flex gap-2 mb-5">
+        <div class="stat-card">
+          <p id="myListCount" class="text-xl font-black">0</p>
+          <p class="text-[10px] text-muted-foreground mt-0.5">My List</p>
+        </div>
+        <div class="stat-card">
+          <p id="watchlistCount" class="text-xl font-black">0</p>
+          <p class="text-[10px] text-muted-foreground mt-0.5">Watching</p>
+        </div>
+        <div class="stat-card">
+          <p id="favCount" class="text-xl font-black">0</p>
+          <p class="text-[10px] text-muted-foreground mt-0.5">Favorites</p>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex border-b border-border -mx-4 px-4 mb-4">
+        <button class="tab-btn active" onclick="switchTab('mylist', this)">My List</button>
+        <button class="tab-btn" onclick="switchTab('watchlist', this)">Watchlist</button>
+        <button class="tab-btn" onclick="switchTab('favorites', this)">Favorites</button>
+      </div>
+
+      <!-- Tab content -->
+      <div id="profileTabContent" class="pb-6">
+        <div class="mini-grid">
+          <div class="skeleton aspect-[2/3] rounded-xl"></div>
+          <div class="skeleton aspect-[2/3] rounded-xl"></div>
+          <div class="skeleton aspect-[2/3] rounded-xl"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Profile Modal -->
+  <div id="editModal" class="modal-overlay" onclick="handleModalClick(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <h2 class="text-base font-bold mb-5">Edit Profile</h2>
+
+      <div class="mui-field">
+        <input type="text" id="editNickname" placeholder=" " maxlength="30" />
+        <label>Nickname</label>
+      </div>
+
+      <div class="mui-field">
+        <textarea id="editBio" placeholder=" " rows="3" maxlength="500"></textarea>
+        <label>Bio (max 500 chars)</label>
+      </div>
+
+      <div class="mui-field">
+        <input type="url" id="editPhoto" placeholder=" " />
+        <label>Profile Photo URL</label>
+      </div>
+
+      <div class="mui-field">
+        <input type="url" id="editBanner" placeholder=" " />
+        <label>Banner Image URL</label>
+      </div>
+
+      <div class="mui-field">
+        <input type="url" id="editSticker" placeholder=" " />
+        <label>Sticker/GIF URL</label>
+      </div>
+
+      <!-- Avatar effect -->
+      <div class="mb-5">
+        <p class="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">Avatar Border Effect</p>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="selectEffect('none', this)" class="effect-pick px-3 py-1.5 text-xs border border-border rounded-lg">None</button>
+          <button onclick="selectEffect('white', this)" class="effect-pick px-3 py-1.5 text-xs border border-white rounded-lg">White</button>
+          <button onclick="selectEffect('animated', this)" class="effect-pick px-3 py-1.5 text-xs border border-white/50 rounded-lg">Animated</button>
+          <button onclick="selectEffect('pulse', this)" class="effect-pick px-3 py-1.5 text-xs border border-white/50 rounded-lg">Pulse</button>
+        </div>
+      </div>
+
+      <!-- Badge -->
+      <div class="mb-5">
+        <p class="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">Profile Badge</p>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="selectBadge('', this)" class="badge-pick px-3 py-1.5 text-xs border border-border rounded-lg">None</button>
+          <button onclick="selectBadge('⭐', this)" class="badge-pick px-3 py-1.5 text-xs border border-border rounded-lg">⭐ Star</button>
+          <button onclick="selectBadge('👑', this)" class="badge-pick px-3 py-1.5 text-xs border border-border rounded-lg">👑 Crown</button>
+          <button onclick="selectBadge('🎭', this)" class="badge-pick px-3 py-1.5 text-xs border border-border rounded-lg">🎭 Actor</button>
+          <button onclick="selectBadge('🗡️', this)" class="badge-pick px-3 py-1.5 text-xs border border-border rounded-lg">🗡️ Blade</button>
+          <button onclick="selectBadge('🎌', this)" class="badge-pick px-3 py-1.5 text-xs border border-border rounded-lg">🎌 Japan</button>
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <button onclick="closeEditModal()" class="flex-1 py-3 border border-border rounded-xl text-sm font-medium hover:bg-secondary transition-colors">Cancel</button>
+        <button onclick="saveProfile()" id="saveBtn" class="flex-1 py-3 bg-white text-black rounded-xl text-sm font-semibold hover:bg-white/90 transition-colors">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <div class="flex items-center justify-around py-2">
+      <a href="/index.html" class="flex flex-col items-center gap-1 px-4 py-1 text-muted-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="text-[10px] font-medium">Home</span>
+      </a>
+      <a href="/browse.html" class="flex flex-col items-center gap-1 px-4 py-1 text-muted-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="7" height="7"/><rect x="15" y="3" width="7" height="7"/><rect x="2" y="14" width="7" height="7"/><rect x="15" y="14" width="7" height="7"/></svg>
+        <span class="text-[10px] font-medium">Browse</span>
+      </a>
+      <a id="navProfile" href="/profile.html" class="flex flex-col items-center gap-1 px-4 py-1 text-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="text-[10px] font-medium">Profile</span>
+      </a>
+    </div>
+  </nav>
+
+  <script>
+    const API = 'https://kirobox-api-0kfe.onrender.com';
+    const token = localStorage.getItem('kirobox_token');
+    const username = localStorage.getItem('kirobox_username');
+    let profileData = null;
+    let selectedEffect = 'white';
+    let selectedBadge = '';
+
+    // Nav avatar
+    (function() {
+      if (username) {
+        const navProfile = document.getElementById('navProfile');
+        navProfile.innerHTML = `
+          <img src="https://api.dicebear.com/7.x/initials/svg?seed=${username}&backgroundColor=ffffff&fontFamily=Inter&bold=true&radius=50" class="w-6 h-6 rounded-full ring-2 ring-white" alt="${username}" />
+          <span class="text-[10px] font-medium">Profile</span>`;
+      }
+    })();
+
+    if (!token) {
+      document.getElementById('notLoggedIn').classList.remove('hidden');
+    } else {
+      document.getElementById('profileContent').classList.remove('hidden');
+      loadProfile();
+    }
+
+    async function loadProfile() {
+      try {
+        const res = await fetch(`${API}/api/user/profile`, { headers: { 'Authorization': token } });
+        if (!res.ok) throw new Error('Unauthorized');
+        profileData = await res.json();
+        renderProfile(profileData);
+      } catch(e) {
+        if (e.message.includes('Unauthorized') || e.message.includes('403')) {
+          localStorage.removeItem('kirobox_token');
+          window.location.href = '/login.html';
+        }
+      }
+    }
+
+    function renderProfile(p) {
+      const displayName = p.nickname || p.username;
+      const avatar = p.profilePhoto || `https://api.dicebear.com/7.x/initials/svg?seed=${p.username}&backgroundColor=ffffff&fontFamily=Inter&bold=true&radius=50`;
+
+      // Banner
+      if (p.profileBanner) {
+        document.getElementById('profileBanner').style.backgroundImage = `url('${p.profileBanner}')`;
+      }
+
+      // Avatar
+      document.getElementById('profileAvatar').src = avatar;
+      selectedEffect = p.profileEffect || 'white';
+      applyAvatarEffect(selectedEffect);
+
+      // Badge
+      selectedBadge = p.profileBadge || '';
+      const badgeEl = document.getElementById('profileBadgeEl');
+      if (selectedBadge) {
+        badgeEl.textContent = selectedBadge;
+        badgeEl.classList.remove('hidden');
+      }
+
+      // Sticker
+      if (p.profileSticker) {
+        const stickerEl = document.getElementById('profileStickerEl');
+        stickerEl.querySelector('img').src = p.profileSticker;
+        stickerEl.classList.remove('hidden');
+      }
+
+      // Text
+      document.getElementById('profileName').textContent = displayName;
+      document.getElementById('profileUsername').textContent = `@${p.username}`;
+      document.getElementById('profileBio').textContent = p.bio || '';
+
+      const role = localStorage.getItem('kirobox_role');
+      if (role === 'admin') {
+        const rb = document.getElementById('roleBadge');
+        rb.textContent = 'Admin';
+        rb.classList.remove('hidden');
+      }
+
+      if (p.country) document.getElementById('profileCountry').textContent = `🌍 ${p.country}`;
+      if (p.joined) {
+        const d = new Date(p.joined);
+        document.getElementById('profileJoined').textContent = `Joined ${d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+      }
+
+      // Stats
+      document.getElementById('myListCount').textContent = p.myList?.length || 0;
+      document.getElementById('watchlistCount').textContent = p.watchlist?.length || 0;
+      document.getElementById('favCount').textContent = p.favorites?.length || 0;
+
+      // Default tab
+      renderAnimeList(p.myList || [], 'profileTabContent');
+    }
+
+    function animeCard(anime) {
+      const title = anime.title?.english || anime.title?.romaji || 'Unknown';
+      return `
+        <a href="/anime.html?id=${anime.anilistId}" class="block">
+          <div class="cover-wrap">
+            <img src="${anime.coverImage}" alt="${title}" loading="lazy" onerror="this.src='/placeholder.svg'" />
+          </div>
+          <p class="card-title">${title}</p>
+        </a>`;
+    }
+
+    function renderAnimeList(list, containerId) {
+      const el = document.getElementById(containerId);
+      if (!list || list.length === 0) {
+        el.innerHTML = `<div class="flex flex-col items-center py-10 text-center"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground mb-3"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/></svg><p class="text-muted-foreground text-sm">Nothing here yet</p></div>`;
+        return;
+      }
+      el.innerHTML = `<div class="mini-grid fade-up">${list.map(animeCard).join('')}</div>`;
+    }
+
+    function switchTab(tab, el) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      if (!profileData) return;
+      if (tab === 'mylist') renderAnimeList(profileData.myList || [], 'profileTabContent');
+      else if (tab === 'watchlist') renderAnimeList(profileData.watchlist || [], 'profileTabContent');
+      else if (tab === 'favorites') renderAnimeList(profileData.favorites || [], 'profileTabContent');
+    }
+
+    function applyAvatarEffect(effect) {
+      const ring = document.getElementById('avatarRing');
+      ring.className = `avatar-ring effect-${effect} absolute inset-[-4px] rounded-full z-0`;
+    }
+
+    function selectEffect(effect, btn) {
+      selectedEffect = effect;
+      document.querySelectorAll('.effect-pick').forEach(b => { b.classList.remove('bg-white', 'text-black'); });
+      btn.classList.add('bg-white', 'text-black');
+      applyAvatarEffect(effect);
+    }
+
+    function selectBadge(badge, btn) {
+      selectedBadge = badge;
+      document.querySelectorAll('.badge-pick').forEach(b => { b.classList.remove('bg-white', 'text-black'); });
+      btn.classList.add('bg-white', 'text-black');
+      const badgeEl = document.getElementById('profileBadgeEl');
+      if (badge) { badgeEl.textContent = badge; badgeEl.classList.remove('hidden'); }
+      else badgeEl.classList.add('hidden');
+    }
+
+    function openEditModal() {
+      if (!profileData) return;
+      document.getElementById('editNickname').value = profileData.nickname || '';
+      document.getElementById('editBio').value = profileData.bio || '';
+      document.getElementById('editPhoto').value = profileData.profilePhoto || '';
+      document.getElementById('editBanner').value = profileData.profileBanner || '';
+      document.getElementById('editSticker').value = profileData.profileSticker || '';
+
+      // Set active effect/badge buttons
+      selectedEffect = profileData.profileEffect || 'white';
+      selectedBadge = profileData.profileBadge || '';
+
+      document.getElementById('editModal').classList.add('open');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('open');
+    }
+
+    function handleModalClick(e) {
+      if (e.target === document.getElementById('editModal')) closeEditModal();
+    }
+
+    async function saveProfile() {
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin mx-auto"></div>';
+
+      const body = {
+        nickname: document.getElementById('editNickname').value.trim(),
+        bio: document.getElementById('editBio').value.trim(),
+        profilePhoto: document.getElementById('editPhoto').value.trim(),
+        profileBanner: document.getElementById('editBanner').value.trim(),
+        profileSticker: document.getElementById('editSticker').value.trim(),
+        profileEffect: selectedEffect,
+        profileBadge: selectedBadge,
+      };
+
+      try {
+        const res = await fetch(`${API}/api/user/profile`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': token },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error('Save failed');
+        closeEditModal();
+        await loadProfile();
+        showToast('Profile updated!');
+      } catch(e) {
+        showToast('Failed to save');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Save';
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('kirobox_token');
+      localStorage.removeItem('kirobox_username');
+      localStorage.removeItem('kirobox_role');
+      window.location.href = '/index.html';
+    }
+
+    function showToast(msg) {
+      const t = document.createElement('div');
+      t.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-foreground text-background text-sm font-medium px-4 py-2 rounded-full z-[200] shadow-lg whitespace-nowrap';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 2500);
+    }
+  </script>
+</body>
+</html>
