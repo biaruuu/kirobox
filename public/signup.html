@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up - KiroBox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { inter: ['Inter', 'sans-serif'] },
+          colors: {
+            border: 'hsl(240 3.7% 15.9%)',
+            background: 'hsl(240 10% 3.9%)',
+            foreground: 'hsl(0 0% 98%)',
+            muted: { DEFAULT: 'hsl(240 3.7% 15.9%)', foreground: 'hsl(240 5% 64.9%)' },
+            secondary: { DEFAULT: 'hsl(240 3.7% 15.9%)', foreground: 'hsl(0 0% 98%)' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body { background: hsl(240 10% 3.9%); color: hsl(0 0% 98%); }
+
+    /* MUI-style floating label */
+    .mui-field { position: relative; margin-bottom: 20px; }
+    .mui-field input, .mui-field select {
+      width: 100%;
+      padding: 20px 14px 8px;
+      background: hsl(240 3.7% 10%);
+      border: 1px solid hsl(240 3.7% 22%);
+      border-radius: 8px;
+      color: hsl(0 0% 98%);
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      box-sizing: border-box;
+      appearance: none;
+    }
+    .mui-field select { cursor: pointer; }
+    .mui-field select option { background: hsl(240 10% 8%); }
+    .mui-field input:focus, .mui-field select:focus {
+      border-color: hsl(0 0% 60%);
+      box-shadow: 0 0 0 1px hsl(0 0% 60%);
+    }
+    .mui-field label {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: hsl(240 5% 64.9%);
+      font-size: 15px;
+      pointer-events: none;
+      transition: all 0.2s ease;
+    }
+    .mui-field input:focus ~ label,
+    .mui-field input:not(:placeholder-shown) ~ label,
+    .mui-field select:focus ~ label,
+    .mui-field select.has-value ~ label {
+      top: 10px;
+      transform: translateY(0);
+      font-size: 11px;
+      color: hsl(0 0% 60%);
+      font-weight: 500;
+    }
+    .mui-field .toggle-pw {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      color: hsl(240 5% 50%); padding: 4px;
+    }
+
+    /* Password strength */
+    .strength-bar { height: 3px; border-radius: 2px; transition: all 0.3s; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fadeUp 0.4s ease forwards; }
+
+    .desktop-warning { display: none; }
+    @media (min-width: 1024px) { .desktop-warning { display: flex; } }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Desktop Warning -->
+  <div class="desktop-warning fixed inset-0 z-[200] bg-background flex-col items-center justify-center text-center p-8">
+    <div class="max-w-md">
+      <div class="text-6xl mb-6">📱</div>
+      <h1 class="text-2xl font-bold mb-3">Mobile Experience</h1>
+      <p class="text-muted-foreground mb-6">KiroBox is designed for mobile devices.</p>
+      <button onclick="document.querySelector('.desktop-warning').style.display='none'" class="px-6 py-2.5 bg-white text-black rounded-lg font-medium text-sm">Continue Anyway</button>
+    </div>
+  </div>
+
+  <!-- Back -->
+  <div class="flex items-center p-4">
+    <a href="/login.html" class="flex items-center gap-2 text-muted-foreground text-sm">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="m12 5-7 7 7 7"/></svg>
+      Back to Login
+    </a>
+  </div>
+
+  <div class="flex-1 flex flex-col justify-center px-6 py-4 max-w-sm mx-auto w-full fade-up">
+
+    <!-- Logo -->
+    <div class="mb-8 text-center">
+      <h1 class="font-black text-3xl tracking-tight mb-1">KIRO<span class="text-muted-foreground font-light">BOX</span></h1>
+      <p class="text-muted-foreground text-sm">Create your account</p>
+    </div>
+
+    <!-- Error -->
+    <div id="errorMsg" class="hidden mb-4 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm"></div>
+    <!-- Success -->
+    <div id="successMsg" class="hidden mb-4 p-3 rounded-lg border border-green-500/30 bg-green-500/10 text-green-400 text-sm"></div>
+
+    <form id="signupForm" onsubmit="handleSignup(event)" autocomplete="off">
+
+      <div class="mui-field">
+        <input type="text" id="username" placeholder=" " required minlength="3" maxlength="20" autocomplete="username" oninput="checkUsername(this.value)" />
+        <label for="username">Username</label>
+      </div>
+      <div id="usernameHint" class="text-xs text-muted-foreground -mt-4 mb-4 px-1">3–20 characters, letters and numbers only</div>
+
+      <div class="mui-field">
+        <input type="password" id="password" placeholder=" " required minlength="6" oninput="checkStrength(this.value)" />
+        <label for="password">Password</label>
+        <button type="button" class="toggle-pw" onclick="togglePw('password', this)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <!-- Strength indicator -->
+      <div class="flex gap-1 -mt-4 mb-4 px-1">
+        <div id="s1" class="strength-bar flex-1 bg-border"></div>
+        <div id="s2" class="strength-bar flex-1 bg-border"></div>
+        <div id="s3" class="strength-bar flex-1 bg-border"></div>
+        <div id="s4" class="strength-bar flex-1 bg-border"></div>
+      </div>
+
+      <div class="mui-field">
+        <input type="password" id="confirmPassword" placeholder=" " required />
+        <label for="confirmPassword">Confirm Password</label>
+        <button type="button" class="toggle-pw" onclick="togglePw('confirmPassword', this)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+
+      <!-- Gender -->
+      <div class="mui-field">
+        <select id="gender" onchange="this.classList.add('has-value')">
+          <option value="" disabled selected></option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
+          <option value="prefer_not">Prefer not to say</option>
+        </select>
+        <label for="gender">Gender (optional)</label>
+        <svg class="absolute right-12 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+
+      <!-- Country -->
+      <div class="mui-field">
+        <select id="country" onchange="this.classList.add('has-value')">
+          <option value="" disabled selected></option>
+          <option value="PH">Philippines</option>
+          <option value="US">United States</option>
+          <option value="JP">Japan</option>
+          <option value="UK">United Kingdom</option>
+          <option value="AU">Australia</option>
+          <option value="CA">Canada</option>
+          <option value="SG">Singapore</option>
+          <option value="ID">Indonesia</option>
+          <option value="MY">Malaysia</option>
+          <option value="TH">Thailand</option>
+          <option value="OTHER">Other</option>
+        </select>
+        <label for="country">Country (optional)</label>
+        <svg class="absolute right-12 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+
+      <!-- Terms -->
+      <label class="flex items-start gap-3 mb-6 cursor-pointer">
+        <input type="checkbox" id="terms" class="mt-0.5 w-4 h-4 rounded border-border accent-white cursor-pointer" required />
+        <span class="text-sm text-muted-foreground">I agree to the <a href="#" class="text-foreground underline">Terms of Service</a> and <a href="#" class="text-foreground underline">Privacy Policy</a></span>
+      </label>
+
+      <button type="submit" id="submitBtn" class="w-full py-3 bg-white text-black font-semibold rounded-lg text-sm hover:bg-white/90 active:scale-95 transition-all flex items-center justify-center gap-2">
+        <span>Create Account</span>
+      </button>
+    </form>
+
+    <p class="text-center text-sm text-muted-foreground mt-6">
+      Already have an account?
+      <a href="/login.html" class="text-foreground font-medium ml-1 underline underline-offset-2">Login</a>
+    </p>
+  </div>
+
+  <script>
+    const API = 'https://kirobox-api-0kfe.onrender.com';
+
+    if (localStorage.getItem('kirobox_token')) {
+      window.location.href = '/profile.html';
+    }
+
+    function togglePw(id, btn) {
+      const input = document.getElementById(id);
+      const isText = input.type === 'text';
+      input.type = isText ? 'password' : 'text';
+      btn.innerHTML = isText
+        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`
+        : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+    }
+
+    function checkUsername(val) {
+      const hint = document.getElementById('usernameHint');
+      const valid = /^[a-zA-Z0-9_]{3,20}$/.test(val);
+      hint.textContent = val.length === 0 ? '3–20 characters, letters and numbers only'
+        : valid ? '✓ Username looks good' : 'Only letters, numbers, and underscores allowed';
+      hint.className = `text-xs -mt-4 mb-4 px-1 ${val.length === 0 ? 'text-muted-foreground' : valid ? 'text-green-400' : 'text-red-400'}`;
+    }
+
+    function checkStrength(val) {
+      const bars = ['s1','s2','s3','s4'];
+      let score = 0;
+      if (val.length >= 6) score++;
+      if (val.length >= 10) score++;
+      if (/[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
+      if (/[^A-Za-z0-9]/.test(val)) score++;
+
+      const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
+      bars.forEach((id, i) => {
+        const el = document.getElementById(id);
+        el.className = `strength-bar flex-1 ${i < score ? colors[score - 1] : 'bg-border'}`;
+      });
+    }
+
+    async function handleSignup(e) {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const errorMsg = document.getElementById('errorMsg');
+      const successMsg = document.getElementById('successMsg');
+      errorMsg.classList.add('hidden');
+      successMsg.classList.add('hidden');
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const gender = document.getElementById('gender').value;
+      const country = document.getElementById('country').value;
+
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+        errorMsg.textContent = 'Username must be 3-20 characters, letters and numbers only.';
+        errorMsg.classList.remove('hidden');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        errorMsg.textContent = 'Passwords do not match.';
+        errorMsg.classList.remove('hidden');
+        return;
+      }
+
+      if (password.length < 6) {
+        errorMsg.textContent = 'Password must be at least 6 characters.';
+        errorMsg.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<div class="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>';
+
+      try {
+        const res = await fetch(`${API}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, gender: gender || undefined, country: country || undefined })
+        });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Registration failed');
+
+        localStorage.setItem('kirobox_token', data.token);
+        localStorage.setItem('kirobox_username', data.username);
+        localStorage.setItem('kirobox_role', data.role);
+
+        successMsg.textContent = 'Account created! Redirecting...';
+        successMsg.classList.remove('hidden');
+        setTimeout(() => { window.location.href = '/index.html'; }, 1200);
+      } catch(err) {
+        errorMsg.textContent = err.message;
+        errorMsg.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerHTML = '<span>Create Account</span>';
+      }
+    }
+  </script>
+</body>
+</html>
