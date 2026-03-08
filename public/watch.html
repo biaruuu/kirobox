@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Watch - KiroBox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { inter: ['Inter', 'sans-serif'] },
+          colors: {
+            border: 'hsl(240 3.7% 15.9%)',
+            background: 'hsl(240 10% 3.9%)',
+            foreground: 'hsl(0 0% 98%)',
+            muted: { DEFAULT: 'hsl(240 3.7% 15.9%)', foreground: 'hsl(240 5% 64.9%)' },
+            secondary: { DEFAULT: 'hsl(240 3.7% 15.9%)', foreground: 'hsl(0 0% 98%)' },
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body { background: #000; color: hsl(0 0% 98%); }
+
+    /* Embed player */
+    .player-wrap {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #000;
+      position: relative;
+    }
+    .player-wrap iframe {
+      width: 100%; height: 100%;
+      border: none; display: block;
+    }
+
+    /* Server pills */
+    .server-pill {
+      padding: 6px 14px; border-radius: 100px;
+      font-size: 12px; font-weight: 600;
+      border: 1px solid hsl(240 3.7% 22%);
+      background: hsl(240 5% 8%);
+      color: hsl(240 5% 64.9%);
+      cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .server-pill.active { background: white; color: black; border-color: white; }
+    .server-pill:hover:not(.active) { border-color: hsl(240 3.7% 35%); color: hsl(0 0% 98%); }
+
+    /* Episode grid */
+    .ep-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+      gap: 6px;
+      padding: 12px 16px;
+    }
+    .ep-btn {
+      aspect-ratio: 1/1;
+      border-radius: 10px;
+      background: hsl(240 5% 10%);
+      border: 1px solid hsl(240 3.7% 16%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: all 0.15s;
+      text-decoration: none; color: hsl(0 0% 80%);
+      position: relative;
+    }
+    .ep-btn:hover { background: hsl(240 3.7% 16%); color: white; border-color: hsl(240 3.7% 28%); }
+    .ep-btn.active { background: white; color: black; border-color: white; }
+    .ep-btn.active::after {
+      content: '';
+      position: absolute; bottom: 3px;
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: black;
+    }
+
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; background: hsla(240 10% 3.9% / 0.95); backdrop-filter: blur(16px); border-top: 1px solid hsl(240 3.7% 15.9%); }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: hsl(240 3.7% 25%); border-radius: 2px; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fadeUp 0.3s ease forwards; }
+
+    .ep-lang-filter {
+      padding: 5px 12px; border-radius: 100px;
+      font-size: 11px; font-weight: 600;
+      border: 1px solid hsl(240 3.7% 22%);
+      background: transparent;
+      color: hsl(240 5% 64.9%);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .ep-lang-filter.active { background: hsl(0 0% 98%); color: black; border-color: white; }
+  </style>
+</head>
+<body class="min-h-screen pb-20">
+
+  <!-- Top bar -->
+  <div class="flex items-center gap-3 px-4 py-3 bg-black sticky top-0 z-40">
+    <a id="backBtn" href="/index.html" class="text-muted-foreground flex-shrink-0">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="m12 5-7 7 7 7"/></svg>
+    </a>
+    <div class="flex-1 min-w-0">
+      <p id="animeTitle" class="text-sm font-semibold truncate">Loading...</p>
+      <p id="epLabel" class="text-xs text-muted-foreground">Episode —</p>
+    </div>
+  </div>
+
+  <!-- Player area -->
+  <div class="bg-black">
+    <!-- Loading state -->
+    <div id="playerLoading" class="player-wrap" style="display:flex;align-items:center;justify-content:center">
+      <div class="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+    </div>
+
+    <!-- Embed container -->
+    <div id="embedContainer" class="player-wrap" style="display:none">
+      <iframe id="embedIframe" allowfullscreen allow="autoplay; fullscreen; picture-in-picture" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+    </div>
+
+    <!-- Error state -->
+    <div id="errorContainer" class="player-wrap" style="display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:24px">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-foreground"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <p id="errorMsg" class="text-muted-foreground text-sm text-center">Video unavailable</p>
+      <button onclick="retryVideo()" class="px-4 py-2 bg-white text-black text-xs font-semibold rounded-lg">Try Another Server</button>
+    </div>
+  </div>
+
+  <!-- Server selector -->
+  <div class="bg-black border-b border-border pb-3 px-4 pt-3" id="serverSection">
+    <p class="text-xs text-muted-foreground mb-2 font-medium">Server</p>
+    <div class="flex gap-2 overflow-x-auto" style="scrollbar-width:none" id="serverRow">
+      <!-- filled dynamically -->
+    </div>
+  </div>
+
+  <!-- Episode info -->
+  <div class="px-4 py-4 fade-up" id="infoSection" style="background:hsl(240 10% 3.9%)">
+    <h2 id="episodeTitle" class="font-bold text-base">Loading...</h2>
+    <p id="episodeMeta" class="text-xs text-muted-foreground mt-1"></p>
+  </div>
+
+  <!-- Episode list -->
+  <div class="border-t border-border" style="background:hsl(240 10% 3.9%)">
+    <div class="px-4 pt-3 pb-2 flex items-center justify-between">
+      <p class="text-sm font-semibold">Episodes</p>
+      <div class="flex items-center gap-2">
+        <div class="flex gap-1.5" id="langFilters"></div>
+        <p id="epListMeta" class="text-xs text-muted-foreground"></p>
+      </div>
+    </div>
+    <div id="episodeList">
+      <div class="flex justify-center py-8">
+        <div class="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <div class="flex items-center justify-around py-2">
+      <a href="/index.html" class="flex flex-col items-center gap-1 px-4 py-1 text-muted-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="text-[10px] font-medium">Home</span>
+      </a>
+      <a href="/browse.html" class="flex flex-col items-center gap-1 px-4 py-1 text-muted-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="7" height="7"/><rect x="15" y="3" width="7" height="7"/><rect x="2" y="14" width="7" height="7"/><rect x="15" y="14" width="7" height="7"/></svg>
+        <span class="text-[10px] font-medium">Browse</span>
+      </a>
+      <a id="navProfile" href="/profile.html" class="flex flex-col items-center gap-1 px-4 py-1 text-muted-foreground">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="text-[10px] font-medium">Profile</span>
+      </a>
+    </div>
+  </nav>
+
+  <script>
+    const API = 'https://kirobox-api-0kfe.onrender.com';
+    const params = new URLSearchParams(window.location.search);
+    const animeId = params.get('id');
+    const epId = params.get('ep');
+    const epNum = parseInt(params.get('num') || '1');
+    let lang = params.get('lang') || 'sub';
+
+    let animeData = null;
+    let currentEpisode = null;
+    let currentServer = 'server1';
+    let allEpisodes = [];
+
+    if (!animeId) window.location.href = '/index.html';
+
+    // Nav avatar
+    (function() {
+      const username = localStorage.getItem('kirobox_username');
+      if (username) {
+        const navProfile = document.getElementById('navProfile');
+        navProfile.innerHTML = `
+          <img src="https://api.dicebear.com/7.x/initials/svg?seed=${username}&backgroundColor=ffffff&fontFamily=Inter&bold=true&radius=50" class="w-6 h-6 rounded-full" alt="${username}" />
+          <span class="text-[10px] font-medium">Profile</span>`;
+      }
+    })();
+
+    function convertToEmbedUrl(url) {
+      if (!url) return null;
+      try {
+        if (url.includes('youtube.com/watch')) {
+          const videoId = new URL(url).searchParams.get('v');
+          return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+        }
+        if (url.includes('youtu.be/')) {
+          const videoId = url.split('youtu.be/')[1]?.split('?')[0];
+          return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+        }
+        return url;
+      } catch { return url; }
+    }
+
+    function showPlayer(url) {
+      if (!url) { showError('No video URL available'); return; }
+
+      document.getElementById('playerLoading').style.display = 'none';
+      document.getElementById('errorContainer').style.display = 'none';
+
+      const embedUrl = convertToEmbedUrl(url);
+      const container = document.getElementById('embedContainer');
+      const iframe = document.getElementById('embedIframe');
+
+      iframe.src = 'about:blank';
+      setTimeout(() => {
+        iframe.src = embedUrl;
+        container.style.display = 'block';
+      }, 50);
+    }
+
+    function showError(msg) {
+      document.getElementById('playerLoading').style.display = 'none';
+      document.getElementById('embedContainer').style.display = 'none';
+      const err = document.getElementById('errorContainer');
+      document.getElementById('errorMsg').textContent = msg || 'Video unavailable';
+      err.style.display = 'flex';
+    }
+
+    function retryVideo() {
+      // Try other server
+      if (currentServer === 'server1' && currentEpisode?.server2) {
+        switchServer('server2', document.getElementById('pill_server2'));
+      } else if (currentServer === 'server2' && currentEpisode?.server1) {
+        switchServer('server1', document.getElementById('pill_server1'));
+      } else {
+        showError('No other servers available');
+      }
+    }
+
+    function setupServers(ep) {
+      const row = document.getElementById('serverRow');
+      const pills = [];
+      if (ep.server1) pills.push({ key: 'server1', label: 'Server 1' });
+      if (ep.server2) pills.push({ key: 'server2', label: 'Server 2' });
+
+      if (!pills.length) {
+        row.innerHTML = '<span class="text-xs text-muted-foreground">No servers available</span>';
+        return;
+      }
+
+      row.innerHTML = pills.map((s, i) => `
+        <button class="server-pill ${i === 0 ? 'active' : ''}" onclick="switchServer('${s.key}', this)" id="pill_${s.key}">
+          ${s.label}
+        </button>`).join('');
+
+      currentServer = pills[0].key;
+    }
+
+    function switchServer(key, btn) {
+      currentServer = key;
+      document.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      if (currentEpisode) showPlayer(currentEpisode[currentServer]);
+    }
+
+    function getLangLabel(l) {
+      if (l === 'sub') return 'Sub';
+      if (l === 'english-dub') return 'Dub';
+      if (l === 'tagalog-dub') return 'TL';
+      return l;
+    }
+
+    function setupLangFilters(episodes) {
+      const langs = [...new Set(episodes.map(e => e.language))].filter(Boolean);
+      if (langs.length <= 1) { document.getElementById('langFilters').innerHTML = ''; return; }
+
+      document.getElementById('langFilters').innerHTML = langs.map(l => `
+        <button class="ep-lang-filter ${l === lang ? 'active' : ''}" onclick="switchLang('${l}', this)">${getLangLabel(l)}</button>
+      `).join('');
+    }
+
+    function switchLang(newLang, btn) {
+      lang = newLang;
+      document.querySelectorAll('.ep-lang-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderEpisodeGrid(allEpisodes);
+    }
+
+    function renderEpisodeGrid(episodes) {
+      const list = document.getElementById('episodeList');
+      const filtered = episodes.filter(e => e.language === lang).sort((a, b) => a.number - b.number);
+      document.getElementById('epListMeta').textContent = `${filtered.length} eps`;
+
+      if (!filtered.length) {
+        list.innerHTML = '<p class="text-center text-muted-foreground text-sm py-8 px-4">No episodes found</p>';
+        return;
+      }
+
+      list.innerHTML = `<div class="ep-grid">` + filtered.map(ep => {
+        const isActive = ep._id === epId || (ep.number === epNum && ep.language === lang && !epId);
+        return `<a href="/watch.html?id=${animeId}&ep=${ep._id}&num=${ep.number}&lang=${lang}" class="ep-btn ${isActive ? 'active' : ''}" title="Episode ${ep.number}${ep.title ? ': ' + ep.title : ''}">${ep.number}</a>`;
+      }).join('') + `</div>`;
+
+      // Scroll to active
+      setTimeout(() => {
+        const activeEl = list.querySelector('.ep-btn.active');
+        if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 200);
+    }
+
+    async function loadWatch() {
+      try {
+        const res = await fetch(`${API}/api/anime/${animeId}`);
+        if (!res.ok) throw new Error('Not found');
+        animeData = await res.json();
+
+        const title = animeData.title?.english || animeData.title?.romaji || 'Unknown';
+        document.title = `Watch - ${title} - KiroBox`;
+        document.getElementById('animeTitle').textContent = title;
+        document.getElementById('backBtn').href = `/anime.html?id=${animeId}`;
+
+        allEpisodes = animeData.episodes || [];
+
+        // Find current episode
+        currentEpisode = allEpisodes.find(e => e._id === epId)
+          || allEpisodes.find(e => e.number === epNum && e.language === lang)
+          || allEpisodes[0];
+
+        if (!currentEpisode) {
+          showError('Episode not found');
+          document.getElementById('episodeList').innerHTML = '<p class="text-center text-muted-foreground text-sm py-8">No episodes available</p>';
+          return;
+        }
+
+        const epTitle = currentEpisode.title || `Episode ${currentEpisode.number}`;
+        document.getElementById('epLabel').textContent = `Episode ${currentEpisode.number}`;
+        document.getElementById('episodeTitle').textContent = epTitle;
+        document.getElementById('episodeMeta').textContent = `${getLangLabel(currentEpisode.language)} · ${title}`;
+
+        setupLangFilters(allEpisodes);
+        setupServers(currentEpisode);
+        renderEpisodeGrid(allEpisodes);
+        showPlayer(currentEpisode[currentServer]);
+
+      } catch(e) {
+        showError('Failed to load video');
+        console.error(e);
+      }
+    }
+
+    loadWatch();
+  </script>
+</body>
+</html>
